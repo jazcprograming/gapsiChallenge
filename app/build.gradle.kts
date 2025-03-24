@@ -1,20 +1,33 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.dagger.hilt)
     kotlin("kapt")
+
 }
+
 
 android {
     namespace = "com.educationalapplication.gapsichallenge"
-    compileSdk = 34
-
+    compileSdk = 35
+    buildFeatures {
+        buildConfig = true
+    }
     defaultConfig {
         applicationId = "com.educationalapplication.gapsichallenge"
         minSdk = 31
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+
+        val localProperties = Properties().apply {
+            load(rootProject.file("local.properties").inputStream())
+        }
+        val walmartApiKey = localProperties["WALMART_API_KEY"] as String
+
+        buildConfigField("String", "WALMART_API_KEY", "\"$walmartApiKey\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
