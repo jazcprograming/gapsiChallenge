@@ -1,5 +1,8 @@
 package com.educationalapplication.gapsichallenge.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,10 +17,13 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -28,9 +34,14 @@ import com.educationalapplication.gapsichallenge.viewmodel.ProductViewModel
 @Composable
 fun ProductScreen(viewModel: ProductViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsState()
-    val listState = rememberLazyListState()
 
+    val listState = rememberLazyListState()
+    val focusManager = LocalFocusManager.current
+
+    val isSearchFocused = remember { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
+
+    val recentSearches by viewModel.recentSearches.collectAsState()
 
     Column(modifier = Modifier
         .fillMaxSize()
@@ -43,12 +54,40 @@ fun ProductScreen(viewModel: ProductViewModel = hiltViewModel()) {
             label = { Text("Buscar producto") },
             modifier = Modifier
                 .fillMaxWidth()
+                .onFocusChanged { focusState ->
+                    isSearchFocused.value = focusState.isFocused
+                },
+            singleLine = true
         )
+        AnimatedVisibility(visible = isSearchFocused.value && recentSearches.isNotEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
+                recentSearches.forEach { search ->
+                    Text(
+                        text = search,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                            .clickable {
+                                focusManager.clearFocus()
+                                query = search
+                                viewModel.search(search, reset = true)
+                                focusManager.clearFocus() // Oculta el listado
+                            }
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(
             onClick = {
+                focusManager.clearFocus()
                 viewModel.search(query.trim(), reset = true)
             },
             modifier = Modifier.align(Alignment.End)

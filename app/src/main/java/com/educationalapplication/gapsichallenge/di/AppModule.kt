@@ -1,6 +1,9 @@
 package com.educationalapplication.gapsichallenge.di
 
+import android.app.Application
+import android.content.Context
 import com.educationalapplication.gapsichallenge.BuildConfig
+import com.educationalapplication.gapsichallenge.data.local.RecentSearchRepository
 import com.educationalapplication.gapsichallenge.data.remote.ApiService
 import com.educationalapplication.gapsichallenge.repository.ProductRepository
 import dagger.Module
@@ -47,5 +50,12 @@ object AppModule {
     @Singleton
     fun provideRepository(apiService: ApiService): ProductRepository {
         return ProductRepository(apiService)
+    }
+    @Provides
+    @Singleton
+    fun provideRecentSearchRepository(
+        application: Application // 👈 CAMBIO AQUÍ
+    ): RecentSearchRepository {
+        return RecentSearchRepository(application)
     }
 }

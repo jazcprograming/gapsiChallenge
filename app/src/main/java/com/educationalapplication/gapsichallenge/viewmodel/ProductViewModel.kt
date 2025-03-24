@@ -2,6 +2,7 @@ package com.educationalapplication.gapsichallenge.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.educationalapplication.gapsichallenge.data.local.RecentSearchRepository
 import com.educationalapplication.gapsichallenge.data.model.Product
 import com.educationalapplication.gapsichallenge.repository.ProductRepository
 import com.educationalapplication.gapsichallenge.ui.screens.search.ProductUiState
@@ -13,11 +14,15 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ProductViewModel @Inject constructor(
-    private val repository: ProductRepository
+    private val repository: ProductRepository,
+    private val recentSearchRepo: RecentSearchRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<ProductUiState>(ProductUiState.Idle)
     val state: StateFlow<ProductUiState> = _state
+    private val _recentSearches = MutableStateFlow<List<String>>(emptyList())
+    val recentSearches: StateFlow<List<String>> = _recentSearches
+
 
     private var currentQuery: String = ""
     private var currentPage: Int = 1
@@ -25,6 +30,13 @@ class ProductViewModel @Inject constructor(
     private var hasMoreResults: Boolean = true
     private val accumulatedProducts = mutableListOf<Product>()
 
+    init {
+        viewModelScope.launch {
+            recentSearchRepo.getRecentSearches().collect {
+                _recentSearches.value = it
+            }
+        }
+    }
     fun search(keyword: String, reset: Boolean = false) {
         if (isLoading || (keyword == currentQuery && !reset && !hasMoreResults)) return
 
@@ -39,6 +51,10 @@ class ProductViewModel @Inject constructor(
         viewModelScope.launch {
             isLoading = true
             try {
+                val currentList = _recentSearches.value
+                if (!currentList.contains(keyword)) {
+                    recentSearchRepo.saveSearch(keyword)
+                }
                 val result = repository.searchProducts(keyword, currentPage)
 
                 result.onSuccess { products ->
