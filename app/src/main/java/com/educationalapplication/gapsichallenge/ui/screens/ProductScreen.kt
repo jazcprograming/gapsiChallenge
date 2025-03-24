@@ -14,6 +14,11 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -31,6 +36,7 @@ import coil.compose.AsyncImage
 import com.educationalapplication.gapsichallenge.ui.screens.search.ProductUiState
 import com.educationalapplication.gapsichallenge.viewmodel.ProductViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductScreen(viewModel: ProductViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsState()
@@ -39,61 +45,73 @@ fun ProductScreen(viewModel: ProductViewModel = hiltViewModel()) {
     val focusManager = LocalFocusManager.current
 
     val isSearchFocused = remember { mutableStateOf(false) }
-    var query by rememberSaveable { mutableStateOf("") }
 
+    var query by rememberSaveable { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false) }
     val recentSearches by viewModel.recentSearches.collectAsState()
 
     Column(modifier = Modifier
         .fillMaxSize()
         .padding(16.dp)) {
 
-        // 🔍 Barra de búsqueda
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
-            label = { Text("Buscar producto") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .onFocusChanged { focusState ->
-                    isSearchFocused.value = focusState.isFocused
-                },
-            singleLine = true
-        )
-        AnimatedVisibility(visible = isSearchFocused.value && recentSearches.isNotEmpty()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp)
-                    .background(MaterialTheme.colorScheme.surface)
+        Row(){
+            ExposedDropdownMenuBox(
+                expanded = expanded && recentSearches.isNotEmpty(),
+                modifier = Modifier.weight(1f),
+                onExpandedChange = {
+                    expanded = it
+                }
             ) {
-                recentSearches.forEach { search ->
-                    Text(
-                        text = search,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                            .clickable {
-                                focusManager.clearFocus()
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = {
+                        query = it
+                        expanded = true
+                    },
+                    label = { Text("Buscar producto") },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                    },
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                )
+
+                ExposedDropdownMenu(
+                    expanded = expanded && recentSearches.isNotEmpty(),
+                    onDismissRequest = {
+                        expanded = false
+                    }
+                ) {
+                    recentSearches.forEach { search ->
+                        DropdownMenuItem(
+                            text = { Text(search) },
+                            onClick = {
                                 query = search
                                 viewModel.search(search, reset = true)
-                                focusManager.clearFocus() // Oculta el listado
+                                expanded = false
+                                focusManager.clearFocus()
                             }
-                    )
+                        )
+                    }
                 }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Button(
+                onClick = {
+                    focusManager.clearFocus()
+                    viewModel.search(query.trim(), reset = true)
+                },
+                modifier = Modifier.align(Alignment.CenterVertically)
+            ) {
+                Text("Buscar")
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
 
-        Button(
-            onClick = {
-                focusManager.clearFocus()
-                viewModel.search(query.trim(), reset = true)
-            },
-            modifier = Modifier.align(Alignment.End)
-        ) {
-            Text("Buscar")
-        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
