@@ -72,9 +72,6 @@ fun ProductScreen(viewModel: ProductViewModel = hiltViewModel()) {
                     modifier = Modifier
                         .menuAnchor()
                         .fillMaxWidth(),
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                    },
                     colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
                 )
 
