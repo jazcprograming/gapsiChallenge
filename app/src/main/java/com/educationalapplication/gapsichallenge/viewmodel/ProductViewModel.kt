@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.educationalapplication.gapsichallenge.data.local.RecentSearchRepository
 import com.educationalapplication.gapsichallenge.data.model.Product
 import com.educationalapplication.gapsichallenge.repository.ProductRepository
+import com.educationalapplication.gapsichallenge.ui.screens.search.ProductScreenState
 import com.educationalapplication.gapsichallenge.ui.screens.search.ProductUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,10 +19,8 @@ class ProductViewModel @Inject constructor(
     private val recentSearchRepo: RecentSearchRepository
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow<ProductUiState>(ProductUiState.Idle)
-    val state: StateFlow<ProductUiState> = _state
-    private val _recentSearches = MutableStateFlow<List<String>>(emptyList())
-    val recentSearches: StateFlow<List<String>> = _recentSearches
+    private val _state = MutableStateFlow(ProductScreenState())
+    val state: StateFlow<ProductScreenState> = _state
 
 
     private var currentQuery: String = ""
@@ -33,7 +32,7 @@ class ProductViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             recentSearchRepo.getRecentSearches().collect {
-                _recentSearches.value = it
+                updateRecentSearches(it)
             }
         }
     }
@@ -45,13 +44,13 @@ class ProductViewModel @Inject constructor(
             currentPage = 1
             hasMoreResults = true
             accumulatedProducts.clear()
-            _state.value = ProductUiState.Loading
+            updateResultState(ProductUiState.Loading)
         }
 
         viewModelScope.launch {
             isLoading = true
             try {
-                val currentList = _recentSearches.value
+                val currentList = _state.value.recentSearches
                 if (!currentList.contains(keyword)) {
                     recentSearchRepo.saveSearch(keyword)
                 }
@@ -60,10 +59,10 @@ class ProductViewModel @Inject constructor(
                 result.onSuccess { products ->
                     hasMoreResults = products.isNotEmpty()
                     accumulatedProducts.addAll(products)
-                    _state.value = ProductUiState.Success(accumulatedProducts.toList())
+                    updateResultState(ProductUiState.Success(accumulatedProducts.toList()))
                     currentPage++
                 }.onFailure { error ->
-                    _state.value = ProductUiState.Error("Error: ${error.message}")
+                    updateResultState(ProductUiState.Error("Error: ${error.message}"))
                     hasMoreResults = false
                     throw error
                 }
@@ -79,5 +78,18 @@ class ProductViewModel @Inject constructor(
 
     fun refresh() {
         search(currentQuery, reset = true)
+    }
+
+    fun updateQuery(newQuery:String){
+        _state.value=_state.value.copy(query = newQuery)
+    }
+    fun updateIsDropdownExpanded(newisDropdownExpanded:Boolean){
+        _state.value=_state.value.copy(isDropdownExpanded = newisDropdownExpanded)
+    }
+    fun updateRecentSearches(newrecentSearches:List<String>){
+        _state.value=_state.value.copy(recentSearches = newrecentSearches)
+    }
+    fun updateResultState(newresultState:ProductUiState){
+        _state.value=_state.value.copy(resultState = newresultState)
     }
 }
